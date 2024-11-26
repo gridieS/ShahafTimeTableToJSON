@@ -1,28 +1,32 @@
-A go program that converts a Shahaf Time Table website into a computer-readable JSON Format
+A go program that converts a Shahaf Time Table website into a computer-readable JSON File Format.
 
 # Usage
 
 ## Build the program binary:
 ```bash
-go build ShahafTimeTableToJSON.go
+go build
 ```
 
 ## Run it with the flags you'd like:
 ```bash
 ./ShahafTimeTableToJSON --url <Your URL>
 ```
-
-Then the program would create another file named "output.json" which will contain the parsed time table.
+## Or build and run the program at once:
+```bash
+go run *.go <options>
+```
 
 Available flags:
 
 ### --url (REQUIRED)
-The website url of the shahaf time table
+The website url of the shahaf time table.
 
-### --stdout
-Instead of creating a output.json file, the program outputs the json to the standard output.
+### --list
+Instead of generating a time table json for the specified class, the program generates a json list of all of the classes available.
 
-### --class
-Checks the timetable of the specific class, default to 7-1 (7th grade, class 1)
+### --class <class-num>
+Checks the timetable of $class-num, default to first class in class list.
 
+### --output <file-name>
+Instead of printing the json in stdout, the program modifies/creates a file $file-name.
 
