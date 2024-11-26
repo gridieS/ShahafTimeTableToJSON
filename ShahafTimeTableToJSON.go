@@ -8,8 +8,7 @@ List of Hour lessons
 
 Example:
 days map:
-Days: {
-	1: {
+Days: { 1: {
 		Day: 18,
 		Month: 11
 	},
@@ -38,13 +37,10 @@ Lessons: {
 import (
 	"bytes"
 	"encoding/json"
-	"flag"
-	"fmt"
+	"errors"
 	"log"
 	"mime/multipart"
 	"net/http"
-	"net/url"
-	"os"
 	"strconv"
 	"strings"
 
@@ -70,6 +66,11 @@ type Lesson struct {
 	Location   string `json:"location"`
 }
 
+type Class struct {
+	ClassName string `json:"className"`
+	ClassNum  int    `json:"classNum"`
+}
+
 const MIN_TEACHER_NAME_LENGTH = 5
 const NUM_OF_LESSONS int = 14
 const NUM_OF_DAYS int = 6
@@ -86,59 +87,9 @@ var hourMap map[int]HourEvent = make(map[int]HourEvent, NUM_OF_LESSONS)
 
 var lessonMap map[int](map[int]([]Lesson)) = make(map[int](map[int]([]Lesson)), NUM_OF_DAYS)
 
-var CLASS_TO_CODE map[string]string = map[string]string{ // const
-	"7-1":   "9",
-	"7-2":   "11",
-	"7-3":   "12",
-	"7-4":   "13",
-	"7-6":   "15",
-	"7-7":   "128",
-	"7-8":   "222",
-	"7-9":   "229",
-	"8-1":   "18",
-	"8-2":   "22",
-	"8-3":   "151",
-	"8-4":   "20",
-	"8-6":   "103",
-	"8-7":   "104",
-	"8-8":   "134",
-	"9-1":   "27",
-	"9-2":   "28",
-	"9-3":   "29",
-	"9-4":   "30",
-	"9-6":   "32",
-	"9-7":   "108",
-	"9-8":   "184",
-	"9-9":   "227",
-	"10-1":  "38",
-	"10-2":  "40",
-	"10-3":  "41",
-	"10-4":  "43",
-	"10-6":  "126",
-	"10-7":  "44",
-	"10-8":  "163",
-	"10-9":  "164",
-	"11-1":  "47",
-	"11-2":  "49",
-	"11-3":  "50",
-	"11-4":  "51",
-	"11-6":  "153",
-	"11-7":  "137",
-	"11-8":  "169",
-	"11-9":  "170",
-	"11-10": "228",
-	"12-1":  "221",
-	"12-2":  "63",
-	"12-3":  "64",
-	"12-4":  "65",
-	"12-5":  "66",
-	"12-6":  "125",
-	"12-7":  "155",
-	"12-8":  "181",
-	"12-9":  "182",
-}
+var classCodeSlice []Class = []Class{}
 
-func AddFormFields(writer *multipart.Writer, classCode string) {
+func AddFormFields(writer *multipart.Writer, classNum int) {
 	formField, err := writer.CreateFormField("__EVENTTARGET")
 	if err != nil {
 		log.Fatal(err)
@@ -155,7 +106,8 @@ func AddFormFields(writer *multipart.Writer, classCode string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, err = formField.Write([]byte(classCode))
+
+	_, err = formField.Write([]byte(strconv.Itoa(classNum)))
 
 	formField, err = writer.CreateFormField("dnn$ctr30329$TimeTableView$MainControl$WeekShift")
 	if err != nil {
@@ -173,11 +125,11 @@ func AddFormFields(writer *multipart.Writer, classCode string) {
 
 }
 
-func createRequest(className string, shahafURL string) *http.Response {
+func createRequest(classNum int, shahafURL string) *http.Response {
 	form := new(bytes.Buffer)
 	writer := multipart.NewWriter(form)
 
-	AddFormFields(writer, CLASS_TO_CODE[className])
+	AddFormFields(writer, classNum)
 
 	client := &http.Client{} // Create a client to send the http requests
 	req, err := http.NewRequest("POST", shahafURL, form)
@@ -195,113 +147,115 @@ func createRequest(className string, shahafURL string) *http.Response {
 
 var curDay int
 
-func processNode(n *html.Node) {
-	switch n.Data {
-	case "tr":
-		if n.FirstChild != nil && n.FirstChild.Type == html.TextNode {
-
-		}
-	case "td":
-		for _, attr := range n.Attr {
-			if attr.Key == "class" {
-				if strings.Contains(attr.Val, "CTitle") { // Signals date
-					dateInString := n.FirstChild.Data[len(n.FirstChild.Data)-DATE_STRING_LENGTH : len(n.FirstChild.Data)]
-					dateDay, _ := strconv.Atoi(dateInString[:DATE_STRING_DAY_END])
-					dateMonth, _ := strconv.Atoi(dateInString[DATE_STRING_MONTH_START:])
-					dateMap[len(dateMap)+1] = Date{dateDay, dateMonth}
-				} else if strings.Contains(attr.Val, "CName") { // Signals Hour element
-					var curHour int
-					var hourToHour []string = make([]string, 2)
-					if n.FirstChild == nil {
+func processTD(n *html.Node) {
+	for _, attr := range n.Attr {
+		if attr.Key == "class" {
+			if strings.Contains(attr.Val, "CTitle") { // Signals date
+				dateInString := n.FirstChild.Data[len(n.FirstChild.Data)-DATE_STRING_LENGTH : len(n.FirstChild.Data)]
+				dateDay, _ := strconv.Atoi(dateInString[:DATE_STRING_DAY_END])
+				dateMonth, _ := strconv.Atoi(dateInString[DATE_STRING_MONTH_START:])
+				dateMap[len(dateMap)+1] = Date{dateDay, dateMonth}
+			} else if strings.Contains(attr.Val, "CName") { // Signals Hour element
+				var curHour int
+				var hourToHour []string = make([]string, 2)
+				if n.FirstChild == nil {
+					continue
+				}
+				boldTag := n.FirstChild
+				for timeChild := boldTag.FirstChild; timeChild != nil; timeChild = timeChild.NextSibling {
+					if timeChild.Type == html.TextNode {
+						convertedString, _ := strconv.Atoi(timeChild.Data)
+						curHour = convertedString
+					} else if timeChild.Data == "span" {
+						if hourToHour[0] == "" {
+							hourToHour[0] = timeChild.FirstChild.Data
+						} else {
+							hourToHour[1] = timeChild.FirstChild.Data
+						}
+					}
+				}
+				if len(hourToHour[0]) > 1 {
+					startHour, _ := strconv.Atoi(hourToHour[0][:EVENT_STRING_HOUR_END])
+					startMinutes, _ := strconv.Atoi(hourToHour[0][EVENT_STRING_MINUTE_START:])
+					endHour, _ := strconv.Atoi(hourToHour[1][:EVENT_STRING_HOUR_END])
+					endMinutes, _ := strconv.Atoi(hourToHour[1][EVENT_STRING_MINUTE_START:])
+					hourMap[curHour] = HourEvent{startHour, startMinutes, endHour, endMinutes}
+				}
+			} else if strings.Contains(attr.Val, "TTCell") { // Signals hour's subject
+				curHour := len(hourMap) - 1
+				curDay = curDay%NUM_OF_DAYS + 1
+				for hourChild := n.FirstChild; hourChild != nil; hourChild = hourChild.NextSibling {
+					if hourChild.Data != "div" {
 						continue
 					}
-					boldTag := n.FirstChild
-					for timeChild := boldTag.FirstChild; timeChild != nil; timeChild = timeChild.NextSibling {
-						if timeChild.Type == html.TextNode {
-							convertedString, _ := strconv.Atoi(timeChild.Data)
-							curHour = convertedString
-						} else if timeChild.Data == "span" {
-							if hourToHour[0] == "" {
-								hourToHour[0] = timeChild.FirstChild.Data
+					var location string
+					var lessonName string
+					var teacher string
+					for lessonChild := hourChild.FirstChild; lessonChild != nil; lessonChild = lessonChild.NextSibling {
+						if lessonChild.Data == "b" {
+							lessonName = lessonChild.FirstChild.Data
+						} else if lessonChild.Type == html.TextNode {
+							if strings.Contains(lessonChild.Data, "(") { // location has to have paranthesis
+								location = lessonChild.Data
 							} else {
-								hourToHour[1] = timeChild.FirstChild.Data
-							}
-						}
-					}
-					if len(hourToHour[0]) > 1 {
-						startHour, _ := strconv.Atoi(hourToHour[0][:EVENT_STRING_HOUR_END])
-						startMinutes, _ := strconv.Atoi(hourToHour[0][EVENT_STRING_MINUTE_START:])
-						endHour, _ := strconv.Atoi(hourToHour[1][:EVENT_STRING_HOUR_END])
-						endMinutes, _ := strconv.Atoi(hourToHour[1][EVENT_STRING_MINUTE_START:])
-						hourMap[curHour] = HourEvent{startHour, startMinutes, endHour, endMinutes}
-					}
-				} else if strings.Contains(attr.Val, "TTCell") { // Signals hour's subject
-					curHour := len(hourMap) - 1
-					curDay = curDay%NUM_OF_DAYS + 1
-					for hourChild := n.FirstChild; hourChild != nil; hourChild = hourChild.NextSibling {
-						if hourChild.Data != "div" {
-							continue
-						}
-						var location string
-						var lessonName string
-						var teacher string
-						for lessonChild := hourChild.FirstChild; lessonChild != nil; lessonChild = lessonChild.NextSibling {
-							if lessonChild.Data == "b" {
-								lessonName = lessonChild.FirstChild.Data
-							} else if lessonChild.Type == html.TextNode {
-								if strings.Contains(lessonChild.Data, "(") { // location has to have paranthesis
-									location = lessonChild.Data
-								} else {
-									if len(lessonChild.Data) >= MIN_TEACHER_NAME_LENGTH {
-										teacher = lessonChild.Data
-									}
+								if len(lessonChild.Data) >= MIN_TEACHER_NAME_LENGTH {
+									teacher = lessonChild.Data
 								}
 							}
 						}
-						curLesson := Lesson{curHour, lessonName, teacher, location}
-						if lessonMap[curDay] == nil {
-							lessonMap[curDay] = make(map[int][]Lesson)
-						}
-						lessonMap[curDay][curHour] = append(lessonMap[curDay][curHour], curLesson)
 					}
+					curLesson := Lesson{curHour, lessonName, teacher, location}
+					if lessonMap[curDay] == nil {
+						lessonMap[curDay] = make(map[int][]Lesson)
+					}
+					lessonMap[curDay][curHour] = append(lessonMap[curDay][curHour], curLesson)
 				}
 			}
 		}
+	}
+}
+
+func processSelect(n *html.Node) {
+	for optionChild := n.FirstChild; optionChild != nil; optionChild = optionChild.NextSibling {
+		if optionChild.FirstChild != nil {
+			var classNum int
+			for _, attr := range optionChild.Attr {
+				if attr.Key == "value" {
+					classNum, _ = strconv.Atoi(attr.Val)
+					break // Only one attribute
+				}
+			}
+			className := optionChild.FirstChild.Data
+
+			classCodeSlice = append(classCodeSlice, Class{className, classNum})
+		}
+	}
+}
+
+func processNode(n *html.Node) {
+	if n.Data == "td" {
+		processTD(n)
 	}
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
 		processNode(c)
 	}
 }
 
-func main() {
-	var className string
-	var shahafURL string
-	var printToStdout bool
-	flag.StringVar(&className, "class", "7-1", "Class Name")
-	flag.StringVar(&shahafURL, "url", "", "Shahaf Time Table Website URL (REQUIRED)")
-	flag.BoolVar(&printToStdout, "stdout", false, "Prints the json to stdout. By default: creates a new file 'output.json'")
-	flag.Parse()
-
-	_, err := url.ParseRequestURI(shahafURL)
-	if err != nil {
-		flag.PrintDefaults()
-		panic(err)
-	}
-
-	if CLASS_TO_CODE[className] == "" {
-		panic("Invalid class name")
-	}
-
-	resp := createRequest(className, shahafURL)
-
-	defer resp.Body.Close()
-
+func computeResponse(resp *http.Response) {
 	var processAllProduct func(*html.Node)
 	processAllProduct = func(n *html.Node) {
 		for _, attr := range n.Attr {
 			if attr.Key == "class" && attr.Val == "TTTable" {
 				processNode(n)
 				return //Only need the first tbody tag
+			}
+		}
+		if n.Data == "select" {
+			for _, attr := range n.Attr {
+				if attr.Key == "class" && attr.Val == "HeaderClasses" {
+					processSelect(n)
+					break
+				}
 			}
 		}
 
@@ -316,34 +270,68 @@ func main() {
 		log.Fatal(err)
 	}
 	processAllProduct(htmlParsedPage)
+}
 
-	lessonMapJson, err := json.Marshal(lessonMap)
-	if err != nil {
-		panic(err)
+func addJSONs(jsonNameList []string, jsonSlice ...string) string {
+	if len(jsonNameList) != len(jsonSlice) {
+		panic(errors.New("Slices have different lengths"))
 	}
-	lessonMapJson = []byte("\"Lessons\":" + string(lessonMapJson) + ",")
-
-	dateMapJson, err := json.Marshal(dateMap)
-	if err != nil {
-		panic(err)
-	}
-
-	dateMapJson = []byte("\"Dates\":" + string(dateMapJson) + ",")
-
-	hourMapJson, err := json.Marshal(hourMap)
-	if err != nil {
-		panic(err)
-	}
-
-	hourMapJson = []byte("\"Hours\":" + string(hourMapJson))
-
-	finalJson := []byte("{" + string(lessonMapJson) + string(dateMapJson) + string(hourMapJson) + "}")
-	if printToStdout {
-		fmt.Printf(string(finalJson))
-	} else {
-		err = os.WriteFile("output.json", finalJson, 0644)
-		if err != nil {
-			panic(err)
+	finalStr := ""
+	for i, jsonName := range jsonNameList {
+		stringToAdd := "\"" + jsonName + "\"" + ": " + jsonSlice[i] + ","
+		if i == len(jsonNameList)-1 {
+			stringToAdd = stringToAdd[:len(stringToAdd)-1]
 		}
+		finalStr += stringToAdd
 	}
+	return "{" + finalStr + "}"
+}
+
+func getClassJSON(shahafURL string) string {
+	resp := createRequest(-1, shahafURL)
+
+	defer resp.Body.Close()
+
+	computeResponse(resp)
+
+	jsonOut, err := json.Marshal(classCodeSlice)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(jsonOut)
+}
+
+func getTimeTableJSON(classNum int, shahafURL string) string {
+	resp := createRequest(classNum, shahafURL)
+
+	defer resp.Body.Close()
+
+	computeResponse(resp)
+
+	jsonOut, err := json.Marshal(lessonMap)
+	if err != nil {
+		panic(err)
+	}
+	lessonMapJson := string(jsonOut)
+
+	jsonOut, err = json.Marshal(dateMap)
+	if err != nil {
+		panic(err)
+	}
+
+	dateMapJson := string(jsonOut)
+
+	jsonOut, err = json.Marshal(hourMap)
+	if err != nil {
+		panic(err)
+	}
+
+	hourMapJson := string(jsonOut)
+
+	jsonNameList := []string{"Lessons", "Dates", "Hours"}
+
+	finalJson := addJSONs(jsonNameList, lessonMapJson, dateMapJson, hourMapJson)
+
+	return finalJson
 }
