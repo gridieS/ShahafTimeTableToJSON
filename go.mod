@@ -1,4 +1,4 @@
-module Scraper
+module ShahafTimeTableToJSON
 
 go 1.23.3
 
