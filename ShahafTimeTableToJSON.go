@@ -38,7 +38,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"log"
 	"mime/multipart"
 	"net/http"
 	"strconv"
@@ -92,32 +91,32 @@ var classCodeSlice []Class = []Class{}
 func AddFormFields(writer *multipart.Writer, classNum int) {
 	formField, err := writer.CreateFormField("__EVENTTARGET")
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	_, err = formField.Write([]byte("dnn$ctr30329$TimeTableView$btnTimeTable"))
 
 	formField, err = writer.CreateFormField("__VIEWSTATE") //REQUIRED
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	_, err = formField.Write([]byte("/wEPDwUIMjU3MTQzOTcPZBYGZg8WAh4EVGV4dAU+PCFET0NUWVBFIEhUTUwgUFVCTElDICItLy9XM0MvL0RURCBIVE1MIDQuMCBUcmFuc2l0aW9uYWwvL0VOIj5kAgEPZBYMAgEPFgIeB1Zpc2libGVoZAICDxYCHgdjb250ZW50BRjXqNeV16TXmdefINei157XpyDXl9ek16hkAgMPFgIfAgUn16jXldek15nXnyDXotee16cg15fXpNeoLERvdE5ldE51a2UsRE5OZAIEDxYCHwIFINeb15wg15TXlteb15XXmdeV16og16nXnteV16jXldeqZAIFDxYCHwIFC0RvdE5ldE51a2UgZAIGDxYCHwIFGNeo15XXpNeZ158g16LXntenINeX16TXqGQCAg9kFgJmD2QWAgIED2QWAmYPZBYGAgIPZBYCZg8PFgYeCENzc0NsYXNzBQtza2luY29sdHJvbB4EXyFTQgICHwFoZGQCAw9kFgJmDw8WBh8DBQtza2luY29sdHJvbB8ABQVMb2dpbh8EAgJkZAIGD2QWAgICD2QWCAIBDw8WAh8BaGRkAgMPDxYCHwFoZGQCBQ9kFgICAg8WAh8BaGQCBw9kFgICAQ9kFgICAQ9kFggCBg9kFgJmD2QWDAICDxYCHgVjbGFzcwUKSGVhZGVyQ2VsbGQCBA8WAh8FBQpIZWFkZXJDZWxsZAIGDxYCHwUFCkhlYWRlckNlbGxkAggPFgIfBQUKSGVhZGVyQ2VsbGQCCg8WAh8FBQpIZWFkZXJDZWxsZAIMDxYCHwUFEEhlYWRlckNlbGxCdXR0b25kAgcPEGQQFQAVABQrAwBkZAIMD2QWAmYPZBYaZg9kFgICAQ8QZBAVMQPXljED15YyA9eWMwPXljQD15Y2A9eWNwPXljgD15Y5A9eXMQPXlzID15czA9eXNAPXlzYD15c3A9eXOAPXmDED15gyA9eYMwPXmDQD15g2A9eYNwPXmDgD15g5A9eZMQPXmTID15kzA9eZNAPXmTYD15k3A9eZOAPXmTkF15nXkDEF15nXkDIF15nXkDMF15nXkDQF15nXkDYF15nXkDcF15nXkDgF15nXkDkG15nXkDEwBdeZ15ExBdeZ15EyBdeZ15EzBdeZ15E0BdeZ15E1BdeZ15E2BdeZ15E3BdeZ15E4BdeZ15E5FTEBOQIxMQIxMgIxMwIxNQMxMjgDMjIyAzIyOQIxOAIyMgMxNTECMjADMTAzAzEwNAMxMzQCMjcCMjgCMjkCMzACMzIDMTA4AzE4NAMyMjcCMzgCNDACNDECNDMDMTI2AjQ0AzE2MwMxNjQCNDcCNDkCNTACNTEDMTUzAzEzNwMxNjkDMTcwAzIyOAMyMjECNjMCNjQCNjUCNjYDMTI1AzE1NQMxODEDMTgyFCsDMWdnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2dnZ2cWAQIUZAICDxYEHwUFCkhlYWRlckNlbGwfAWhkAgMPFgIfAWhkAgQPFgIfBQUKSGVhZGVyQ2VsbGQCBg8WAh8FBRJIZWFkZXJDZWxsU2VsZWN0ZWRkAggPFgIfBQUKSGVhZGVyQ2VsbGQCCg8WAh8FBQpIZWFkZXJDZWxsZAIMDxYCHwUFCkhlYWRlckNlbGxkAg4PFgIfBQUKSGVhZGVyQ2VsbGQCEA8WAh8FBQpIZWFkZXJDZWxsZAISDxYEHwUFCkhlYWRlckNlbGwfAWhkAhMPFgIfAWhkAhQPFgIfBQUQSGVhZGVyQ2VsbEJ1dHRvbmQCDw8PFgIfAAU7157XoteV15PXm9efINecOiAxOC4xMS4yMDI0LCDXqdei15Q6IDIwOjQ0LCDXnteh15o6IEExMzAzMjlkZGR1CcRP+gmN0gm8+oYknIC/sTy65Q=="))
 
 	formField, err = writer.CreateFormField("dnn$ctr30329$TimeTableView$ClassesList")
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
 	_, err = formField.Write([]byte(strconv.Itoa(classNum)))
 
 	formField, err = writer.CreateFormField("dnn$ctr30329$TimeTableView$MainControl$WeekShift")
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	_, err = formField.Write([]byte("0"))
 
 	formField, err = writer.CreateFormField("dnn$ctr30329$TimeTableView$ControlId")
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	_, err = formField.Write([]byte("8"))
 
@@ -134,12 +133,12 @@ func createRequest(classNum int, shahafURL string) *http.Response {
 	client := &http.Client{} // Create a client to send the http requests
 	req, err := http.NewRequest("POST", shahafURL, form)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
 	return resp
@@ -267,7 +266,7 @@ func computeResponse(resp *http.Response) {
 	// Make a recursive call to the function
 	htmlParsedPage, err := html.Parse(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	processAllProduct(htmlParsedPage)
 }
