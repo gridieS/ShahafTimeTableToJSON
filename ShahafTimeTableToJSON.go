@@ -287,6 +287,10 @@ func addJSONs(jsonNameList []string, jsonSlice ...string) string {
 }
 
 func getClassJSON(shahafURL string) string {
+	dateMap = make(map[int]Date, NUM_OF_DAYS)
+	hourMap = make(map[int]HourEvent, NUM_OF_LESSONS)
+	lessonMap = make(map[int](map[int]([]Lesson)), NUM_OF_DAYS)
+	classCodeSlice = []Class{}
 	resp := createRequest(-1, shahafURL)
 
 	defer resp.Body.Close()
@@ -302,11 +306,16 @@ func getClassJSON(shahafURL string) string {
 }
 
 func getTimeTableJSON(classNum int, shahafURL string) string {
+	dateMap = make(map[int]Date, NUM_OF_DAYS)
+	hourMap = make(map[int]HourEvent, NUM_OF_LESSONS)
+	lessonMap = make(map[int](map[int]([]Lesson)), NUM_OF_DAYS)
+	classCodeSlice = []Class{}
+
 	resp := createRequest(classNum, shahafURL)
 
-	defer resp.Body.Close()
-
 	computeResponse(resp)
+
+	defer resp.Body.Close()
 
 	jsonOut, err := json.Marshal(lessonMap)
 	if err != nil {

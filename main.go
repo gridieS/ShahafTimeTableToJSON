@@ -1,8 +1,8 @@
 // If you want to use the api in any other language supported by c, build this main file
 package main
 
+import "C"
 import (
-	"C"
 	"net/url"
 )
 
@@ -15,6 +15,7 @@ func mainC(shahafURLPtr *C.char, listClassesC C.int, classNumC C.int) *C.char {
 	if err != nil {
 		panic(err)
 	}
+
 	var jsonOut string
 	if listClasses == 1 {
 		jsonOut = getClassJSON(shahafURL)
